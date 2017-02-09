@@ -1,1 +1,3 @@
-# frituurwebsite
+# Frituur website
+
+## Docker setup

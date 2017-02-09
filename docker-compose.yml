@@ -1,0 +1,83 @@
+version: '2'
+services:
+  # Storage containers
+  storage:
+    image: busybox
+    volumes:
+      - ./src:/app
+
+  # PHP container
+  php-fpm:
+    build:
+      context: .
+      dockerfile: ./docker/php-fpm/Dockerfile
+    command: 'php-fpm'
+    networks:
+      - backend
+    volumes_from:
+      - storage
+    links:
+      - db:db
+
+  # Workspace container (holding all tools)
+  workspace:
+    build:
+      context: .
+      dockerfile: ./docker/workspace/Dockerfile
+    volumes:
+      - ./Makefile:/app/Makefile
+    volumes_from:
+      - storage
+    command: 'php artisan'
+    networks:
+      - backend
+
+  # Nginx
+  nginx:
+    build:
+      context: .
+      dockerfile: ./docker/nginx/Dockerfile
+      args:
+        PHP_UPSTREAM: php-fpm:9001
+    networks:
+      - backend
+    volumes_from:
+      - storage
+    ports:
+      - '8000:80'
+    depends_on:
+      - php-fpm
+
+  db:
+    image: mariadb:10
+    networks:
+      - backend
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_USER: laravel
+      MYSQL_PASSWORD: secret
+      MYSQL_DATABASE: frituur
+    volumes:
+      - mysqldata:/var/lib/mysql
+
+  # Mariadb container
+#  db:
+#    image: postgres:9.5
+#    networks:
+#      - backend
+#    environment:
+#      POSTGRES_USER: laravel
+#      POSTGRES_PASSWORD: secret
+#      POSTGRES_DB: frituur
+#    volumes:
+#      - pgdata:/var/lib/postgresql/data
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  mysqldata:
+    driver: local
+  pgdata:
+    driver: local
